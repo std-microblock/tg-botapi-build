@@ -40,7 +40,6 @@ jobs:
         Remove-Item -Path build -Recurse -Force -ErrorAction SilentlyContinue
         New-Item -Path build -ItemType Directory
         
-        # 显式指定依赖路径
         cmake -G "Visual Studio 17 2022" -A x64 `
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
           -DCMAKE_INSTALL_PREFIX=../install `
@@ -62,7 +61,7 @@ jobs:
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $binDir = "tdlight-telegram-bot-api/install/bin"
+        $binDir = "tdlight-telegram-bot-api/build/x64/Release"
         Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
     - name: Upload release
