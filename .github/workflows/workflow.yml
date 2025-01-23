@@ -32,7 +32,7 @@ jobs:
         Remove-Item build -Recurse -Force -ErrorAction SilentlyContinue
         New-Item -ItemType Directory -Path build
         cd build
-        cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=.. -DCMAKE_TOOLCHAIN_FILE:../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+        cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=.. -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
         cmake --build . --target install --config Release
 
     - name: Prepare artifacts
