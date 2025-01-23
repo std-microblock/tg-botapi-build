@@ -61,7 +61,7 @@ jobs:
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $binDir = "tdlight-telegram-bot-api/bin
+        $binDir = "tdlight-telegram-bot-api/bin"
         Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
     - name: Upload release
