@@ -1,56 +1,76 @@
-name: Build
+name: Daily BotAPI Build
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天UTC时间0点运行
-  workflow_dispatch:     # 允许手动触发
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout current repo
+    - name: Checkout empty repo
       uses: actions/checkout@v4
 
-    - name: Clone tdlight-telegram-bot-api
+    - name: Clone source code
       run: git clone --recursive https://github.com/tdlight-team/tdlight-telegram-bot-api.git
 
-    - name: Setup vcpkg dependencies
+    - name: Setup build environment
       shell: pwsh
       working-directory: ./tdlight-telegram-bot-api
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
+        # 安装vcpkg并设置环境变量
+        git clone https://github.com/microsoft/vcpkg
         cd vcpkg
-        ./bootstrap-vcpkg.bat
-        ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+        ./bootstrap-vcpkg.bat -disableMetrics
+        $vcpkgRoot = Resolve-Path .
+        echo "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+        ./vcpkg integrate install
+        ./vcpkg install --triplet x64-windows gperf openssl zlib
+        
+        # 将gperf添加到PATH
+        $gperfPath = Join-Path $vcpkgRoot "installed\x64-windows\tools\gperf"
+        echo "$gperfPath" >> $env:GITHUB_PATH
+
+    - name: Configure CMake
+      shell: pwsh
+      working-directory: ./tdlight-telegram-bot-api
+      run: |
+        Remove-Item -Path build -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -Path build -ItemType Directory
+        
+        # 显式指定依赖路径
+        cmake -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+          -DCMAKE_INSTALL_PREFIX=../install `
+          -DGPERF_EXECUTABLE="$env:VCPKG_ROOT/installed/x64-windows/tools/gperf/gperf.exe" `
+          -DZLIB_ROOT="$env:VCPKG_ROOT/installed/x64-windows" `
+          -B build `
+          -S .
 
     - name: Build project
       shell: pwsh
-      working-directory: ./tdlight-telegram-bot-api
-      run: |
-        Remove-Item build -Recurse -Force -ErrorAction SilentlyContinue
-        New-Item -ItemType Directory -Path build
-        cd build
-        cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=.. -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
-        cmake --build . --target install --config Release
+      working-directory: ./tdlight-telegram-bot-api/build
+      run: cmake --build . --config Release --target install -- /m
 
-    - name: Prepare artifacts
+    - name: Verify binaries
+      shell: pwsh
+      run: Get-ChildItem -Recurse tdlight-telegram-bot-api/install
+
+    - name: Create release package
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        New-Item -ItemType Directory -Path artifacts
-        Copy-Item -Path .\tdlight-telegram-bot-api\bin\* -Destination artifacts
-        Compress-Archive -Path artifacts/* -DestinationPath "telegram-bot-api-$date.zip"
+        $binDir = "tdlight-telegram-bot-api/install/bin"
+        Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
-    - name: Create Release
+    - name: Upload release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: nightly-$(date -u +'%Y%m%d')
         name: Nightly Build $(date -u +'%Y-%m-%d')
-        body: "Automated daily build of Telegram Bot API Server"
-        files: |
-          telegram-bot-api-*.zip
+        files: botapi-*.zip
         draft: false
         prerelease: true
         overwrite: true
