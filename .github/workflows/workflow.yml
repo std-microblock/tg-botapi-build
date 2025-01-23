@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天UTC时间0点运行
+  workflow_dispatch:     # 允许手动触发
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout current repo
+      uses: actions/checkout@v4
+
+    - name: Clone tdlight-telegram-bot-api
+      run: git clone --recursive https://github.com/tdlight-team/tdlight-telegram-bot-api.git
+
+    - name: Setup vcpkg dependencies
+      shell: pwsh
+      working-directory: ./tdlight-telegram-bot-api
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        ./bootstrap-vcpkg.bat
+        ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+
+    - name: Build project
+      shell: pwsh
+      working-directory: ./tdlight-telegram-bot-api
+      run: |
+        Remove-Item build -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path build
+        cd build
+        cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=.. -DCMAKE_TOOLCHAIN_FILE:../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+        cmake --build . --target install --config Release
+
+    - name: Prepare artifacts
+      shell: pwsh
+      run: |
+        $date = Get-Date -Format "yyyyMMdd"
+        New-Item -ItemType Directory -Path artifacts
+        Copy-Item -Path .\tdlight-telegram-bot-api\bin\* -Destination artifacts
+        Compress-Archive -Path artifacts/* -DestinationPath "telegram-bot-api-$date.zip"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: nightly-$(date -u +'%Y%m%d')
+        name: Nightly Build $(date -u +'%Y-%m-%d')
+        body: "Automated daily build of Telegram Bot API Server"
+        files: |
+          telegram-bot-api-*.zip
+        draft: false
+        prerelease: true
+        overwrite: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
