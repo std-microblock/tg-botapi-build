@@ -55,13 +55,13 @@ jobs:
 
     - name: Verify binaries
       shell: pwsh
-      run: Get-ChildItem -Recurse tdlight-telegram-bot-api/install
+      run: Get-ChildItem -Recurse tdlight-telegram-bot-api
 
     - name: Create release package
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $binDir = "tdlight-telegram-bot-api/build/x64/Release"
+        $binDir = "tdlight-telegram-bot-api/bin
         Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
     - name: Upload release
