@@ -70,7 +70,7 @@ jobs:
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $tagName = "nightly-$date"
+        $tagName = "nightly-tdlight-$date"
         git tag $tagName
         echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
 
@@ -78,9 +78,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.create-tag.outputs.tag_name }}
-        name: Nightly Build ${{ steps.create-tag.outputs.tag_name }}
+        name: Nightly Build ${{ steps.create-tag.outputs.tag_name }} (TDLight fork)
         files: ${{ steps.package-artifacts.outputs.zip_path }}
         draft: false
-        prerelease: true
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
