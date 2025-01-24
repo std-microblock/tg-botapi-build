@@ -1,5 +1,5 @@
 name: Daily BotAPI Build
-
+permissions: write-all
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -59,7 +59,7 @@ jobs:
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $binDir = "D:\a\tg-botapi-build\tg-botapi-build\tdlight-telegram-bot-api\build\Release"
+        $binDir = ".\tdlight-telegram-bot-api\build\Release"
         Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
     - name: Upload release
@@ -70,6 +70,5 @@ jobs:
         files: botapi-*.zip
         draft: false
         prerelease: true
-        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
