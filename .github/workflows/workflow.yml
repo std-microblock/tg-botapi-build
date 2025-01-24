@@ -56,18 +56,30 @@ jobs:
       run: Get-ChildItem -Recurse tdlight-telegram-bot-api
 
     - name: Create release package
+      id: package-artifacts
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
         $binDir = ".\tdlight-telegram-bot-api\build\Release"
-        Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
+        $zipName = "botapi-$date.zip"
+        Compress-Archive -Path "$binDir/*" -DestinationPath $zipName
+        echo "zip_path=$zipName" >> $env:GITHUB_OUTPUT
+
+    - name: Create Git tag
+      id: create-tag
+      shell: pwsh
+      run: |
+        $date = Get-Date -Format "yyyyMMdd"
+        $tagName = "nightly-$date"
+        git tag $tagName
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
 
     - name: Upload release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: nightly-$(date -u +'%Y%m%d')
-        name: Nightly Build $(date -u +'%Y-%m-%d')
-        files: botapi-*.zip
+        tag_name: ${{ steps.create-tag.outputs.tag_name }}
+        name: Nightly Build ${{ steps.create-tag.outputs.tag_name }}
+        files: ${{ steps.package-artifacts.outputs.zip_path }}
         draft: false
         prerelease: true
       env:
