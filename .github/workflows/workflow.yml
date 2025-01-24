@@ -20,7 +20,6 @@ jobs:
       shell: pwsh
       working-directory: ./tdlight-telegram-bot-api
       run: |
-        # 安装vcpkg并设置环境变量
         git clone https://github.com/microsoft/vcpkg
         cd vcpkg
         ./bootstrap-vcpkg.bat -disableMetrics
@@ -28,8 +27,7 @@ jobs:
         echo "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
         ./vcpkg integrate install
         ./vcpkg install --triplet x64-windows gperf openssl zlib
-        
-        # 将gperf添加到PATH
+      
         $gperfPath = Join-Path $vcpkgRoot "installed\x64-windows\tools\gperf"
         echo "$gperfPath" >> $env:GITHUB_PATH
 
@@ -61,7 +59,7 @@ jobs:
       shell: pwsh
       run: |
         $date = Get-Date -Format "yyyyMMdd"
-        $binDir = "tdlight-telegram-bot-api/build/bin"
+        $binDir = "D:\a\tg-botapi-build\tg-botapi-build\tdlight-telegram-bot-api\build\Release"
         Compress-Archive -Path "$binDir/*" -DestinationPath "botapi-$date.zip"
 
     - name: Upload release
